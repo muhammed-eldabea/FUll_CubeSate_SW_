@@ -1,6 +1,6 @@
 
 #include <LiquidCrystal.h>
-#include <Keypad.h> ;
+#include <Keypad.h>  
 
 void show_waiting_message();
 void Show_Ping_message();
@@ -11,6 +11,7 @@ void USER_UI();
 #define Send_Command 10
 #define GET_Telemetry 11
 #define PING_DONE 12
+#define SYNCH_DONE         99 
 
 int Telemtry_Buffer[4];
 String Command_From_COM_STR;
@@ -25,8 +26,8 @@ char keys[ROWS][COLS] = {
     {'4', '5', '6', 'B'},
     {'7', '8', '9', 'C'},
     {'*', '0', '#', 'D'}};
-byte rowPins[ROWS] = {A2, A3, A4, A5}; //connect to the row pinouts of the keypad
-byte colPins[COLS] = {8, 9, 10, 11};   //connect to the column pinouts of the keypad
+byte rowPins[ROWS] = {21, 20, 19, 18}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {17, 16, 15, 14};   //connect to the column pinouts of the keypad
 
 String inputString;
 long inputInt;
@@ -39,9 +40,8 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-int Command[5] = {
-    0,
-};
+int Command[5] = {0,}; 
+
 
 void setup()
 {
@@ -49,7 +49,7 @@ void setup()
   // set up the LCD's number of columns and rows:
   inputString.reserve(10);
   lcd.begin(16, 2);
-  Serial.begin(9600);
+  Serial.begin(38400);
   // Print a message to the LCD.
   lcd.print("hello, world!");
   delay(2000);
@@ -58,7 +58,7 @@ void setup()
   delay(2000);
   lcd.clear();
   lcd.print("Enter command");
-  delay(2000);
+  delay(2000);                                                                                   
   lcd.clear();
 
   Request_Command_From_USer();
@@ -73,7 +73,7 @@ void loop()
 {
 
   PRESED_TO_CALL_UI = keypad.getKey();
-  Serial.println(PRESED_TO_CALL_UI);
+  //Serial.println(PRESED_TO_CALL_UI);
 
   if ((PRESED_TO_CALL_UI == 'C') || (Request_flag == 1))
   {
@@ -82,7 +82,11 @@ void loop()
     lcd.print("wait to conect");
     lcd.setCursor(0, 1);
     lcd.print(" <C> FOR UI ");
-  }
+  } 
+for (int i = 0 ; i<0 ; i++) {
+  Serial.println(Command[i]) ; 
+} 
+
 }
 
 void serialEvent()
@@ -90,40 +94,46 @@ void serialEvent()
 
   if (Serial.available() > 0)
   {
-    Command_From_COM_STR = Serial.readString();
-    Command_From_COM = Command_From_COM_STR.toInt();
-    Serial.println(Command_From_COM, DEC);
+    Command_From_COM = Serial.read();
+    ///Command_From_COM = Command_From_COM_STR.toInt();
+    //Serial.println(Command_From_COM, DEC);
   }
 
   if (Command_From_COM == PING_DONE)
   {
     Show_Ping_message();
     lcd.clear();
-    Command_From_COM = 0;
+    Command_From_COM = 0; 
+   // Serial.write(SYNCH_DONE) ; 
   }
 
   if (Command_From_COM == Send_Command)
   {
-    Serial.println("Sending Command");
+    //Serial.write(SYNCH_DONE) ;
+    //lcd.clear() ; 
+    //lcd.print("Send Command") ;  
+    //Serial.println("Sending Command");
     for (int i = 0; i < 5; i++)
     {
-      Serial.println(Command[i]);
-      //Serial.write(Command[i]);
+      //Serial.println(Command[i]);
+      Serial.write(Command[i]);
     }
+    
     Command_From_COM = 0;
   }
 
   if (Command_From_COM == GET_Telemetry)
   {
+    //Serial.write(SYNCH_DONE) ;
     for (int i = 0; i < 4; i++)
     {
-      Telemtry_Buffer[i] = (Serial.readString()).toInt();
-      delay(50);
+      //Telemtry_Buffer[i] = (Serial.read()).toInt();
+        
 
-      /*  uncomment for real HW 
+     /*  uncomment for real HW*/ 
     Telemtry_Buffer[i] = Serial.read();
-    delay(50);
-    */
+    
+   
     }
 
     Command_From_COM = 0;
@@ -162,7 +172,7 @@ void Show_telemtry_Value()
   lcd.setCursor(0, 1);
   lcd.print("Value : ");
   lcd.setCursor(8, 1);
-  lcd.print(Telemtry_Buffer[0]);
+  lcd.print(String(Telemtry_Buffer[0]));
   delay(2000);
 
   /*print the Voltage value in the screen */
@@ -172,7 +182,7 @@ void Show_telemtry_Value()
   lcd.setCursor(0, 1);
   lcd.print("Value : ");
   lcd.setCursor(8, 1);
-  lcd.print(Telemtry_Buffer[1]);
+  lcd.print(String(Telemtry_Buffer[1]));
   delay(2000);
 
   /* LDR MAX value */
@@ -182,7 +192,7 @@ void Show_telemtry_Value()
   lcd.setCursor(0, 1);
   lcd.print("Value : ");
   lcd.setCursor(8, 1);
-  lcd.print(Telemtry_Buffer[2]);
+  lcd.print(String(Telemtry_Buffer[2]));
   delay(2000);
 
   /*print the Faluarr value in the screen */
@@ -284,7 +294,7 @@ void USER_UI()
 
   while (flag == 0)
   {
-    Serial.println(KEY_PRESSED_F);
+    //Serial.println(KEY_PRESSED_F);
 
     lcd.clear();
     lcd.setCursor(0, 0);
