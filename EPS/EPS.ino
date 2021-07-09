@@ -3,21 +3,24 @@
 #include <Wire.h>
 #include <Servo.h>
 
-
 /*****************************************************/
-#define MOTOR_SERVO_ATTACH_PIN 9
+#define MOTOR_SERVO_ARMS_PIN 9 
+#define MOTOR_SERVO_POSITION_PIN 8
 #define PAYLOAD_PIN 5
-#define CHARGE_PIN_INDICATOR 4 
+#define INDICATOR_PIN 10 
+#define TEMPRETURE_SENSOR_PIN A0
+#define VOLTAGE_SENSOR_PIN A1
+#define LDR1_PIN A2
+#define LDR2_PIN A3 
+
+//#define CHARGE_PIN_INDICATOR 4 
 
 /******************************************************/
 Servo myservo ;
-
-
+Servo initi_servo ; 
 /******************************************************/
-void SERVO_CONTROL_ANGLE_(int index )   ; 
-
 int Command = 0 ; 
-int Data[3] = {1,2,3} ; 
+int TELMETRY[3] = {0,0,0} ; 
 int counter = 0 ;
 int Test_CHARGE_MODE  = 0  ; 
 int PAYLOAD_DELAY_TO_RUN = 0;
@@ -29,13 +32,37 @@ int Data_in[4] = {0,} ;
 void setup()
 {
   Wire.begin(9);                // join i2c bus with address #8
+  Serial.begin(9600) ; 
   Wire.onRequest(requestEvent); // register event
   Wire.onReceive(receiveEvent);
-  myservo.attach(MOTOR_SERVO_ATTACH_PIN);
+    /* Servos Setup*/
+  initi_servo.attach(MOTOR_SERVO_ARMS_PIN);
+  myservo.attach(MOTOR_SERVO_POSITION_PIN);
+ 
+     /*PIN direction */
   pinMode(PAYLOAD_PIN, OUTPUT);
-  pinMode(CHARGE_PIN_INDICATOR, OUTPUT);
-  Serial.begin(9600) ; 
+  pinMode(TEMPRETURE_SENSOR_PIN,INPUT);
+  pinMode(VOLTAGE_SENSOR_PIN,INPUT);
+  pinMode(LDR1_PIN,INPUT);
+  pinMode(LDR2_PIN,INPUT);
+  pinMode(INDICATOR_PIN,OUTPUT);
+  digitalWrite(INDICATOR_PIN,HIGH);
+  
+  
+   /******************************************************************************************/
+  /* servo intitlization */  
+     initi_servo.attach(MOTOR_SERVO_ARMS_PIN); 
+     for (int pos = 0; pos <= 90; pos += 1) { // goes from 0 degrees to 180 degrees
+     initi_servo.write(pos);              // tell servo to go to position in variable 'pos'
+     delay(15);                       // waits 15ms for the servo to reach the position
+    /*************************************************************************************************/
+  } 
 }
+
+
+
+
+
 
 void loop() {
   //delay(6000) ; 
@@ -43,10 +70,17 @@ void loop() {
   Update_Telemetry_data() ;
   delay(2000) ;  
   RUN_PAY_LOAD();
-  CHECK_FOR_CHARGE() ;  
-  for (int i =  0 ; i<4 ; i++) 
-  {
-    Serial.println(Data_in[i]) ; 
+ Charge_Mode () ;   
+ for (int i =  0 ; i<3 ; i++) 
+ {
+  switch(i){
+    case 0:  Serial.print("tempreture is " ) ; Serial.println (Data_in[i]); break ;
+    case 1:  Serial.print("volt is " ) ; Serial.println (Data_in[i]); break ;
+    case 2:  Serial.print("ldr is " ) ; Serial.println (Data_in[i]); break ;
+
+    
+    
+    }
   }
 }
 
@@ -55,7 +89,7 @@ void loop() {
 void requestEvent() {
   for (int i =  0 ; i < 3 ; i++) 
   { 
-  Wire.write(Data[i]); // respond with message of 6 bytes
+  Wire.write(TELMETRY[i]); // respond with message of 2 bytes
   // as expected by master
 }
 }
@@ -75,77 +109,45 @@ void Read_Sensor_Vaule()
 
 ---------------------------------------------------------------------------------------*/
 
-  Data_in[0] = map(analogRead(A0), 0, 1023, 0, 255); /*Temp*/
-  Data_in[1] = map(analogRead(A1), 0, 1023, 0, 255); /*Volat*/
+  Data_in[0] = map(analogRead(TEMPRETURE_SENSOR_PIN), 0, 1023, 0, 255); /*Temp*/
+  Data_in[1] = map(analogRead(VOLTAGE_SENSOR_PIN), 0, 1023, 0, 5); /*Volat*/
 
-  Data_in[2] = map(analogRead(A2), 0, 1023, 0, 255);   /*LDR1*/
-  Data_in[3] = map(analogRead(A0), 0, 1023, 0, 155);   /*LDR2*/
+  Data_in[2] = map(analogRead(LDR1_PIN), 0, 1023, 0, 255);   /*LDR1*/
+  Data_in[3] = map(analogRead(LDR2_PIN), 0, 1023, 0, 255);   /*LDR2*/
 
 } 
 
 
 
-
-
-int Get_MAx_LDR_Value () 
-{
-  /*--------------------------------------------------------------------------------------
-[FUNCTION NAME] :Get_MAx_LDR_Value
-[DESRIPTION]    : Get the max value of LDR sensor that 
-                  used to control the coordinate of the cube  
-[ARGUMENT(S)]   : 
-   [IN]         : void 
-[Return]        : int data represent the max value 
----------------------------------------------------------------------------------------*/
-
-  int max = Data_in[2];
-  for (int i = 3; i < 4; i++)
-  {
-    if (Data_in[i] >= max)
-    {
-      max = Data_in[i];
-    }
-}
-return max ; 
-} 
-
-
-int Get_MAx_LDR_index()
-{
-  /*--------------------------------------------------------------------------------------
-[FUNCTION NAME] :Get_MAx_LDR_index
-[DESRIPTION]    : get index of max value to select the coordinte angle for charge battery   
-[ARGUMENT(S)]   : 
-   [IN]         : void 
-[Return]        : int data represent the max value 
----------------------------------------------------------------------------------------*/
-
-  int max = Get_MAx_LDR_Value() ; 
-  int index = 0 ;
-  int i ; 
-  for ( i = 2; i < 4; i++)
-  {
-    if (Data_in[i] >= max)
-    {
-      index = i ; 
-    }
-  }
-  return i ; 
-}
 
 void Update_Telemetry_data() 
 {
    
-  Data[0] = Data_in[0];
-  Data[1] = Data_in[1];
-  Data[2] = Get_MAx_LDR_Value();
+  TELMETRY[0] = Data_in[0];
+  TELMETRY[1] = Data_in[1];
+  if (Data_in[2] < Data_in[3]) 
+{
+  
+  TELMETRY[2] = Data_in[2];
+}
+else 
+{
+ 
+TELMETRY[2] = Data_in[3];
+}
+  
 } 
 
 void receiveEvent(int howMany) {
 
   PAYLOAD_DELAY_TO_RUN = Wire.read() ;
   PAYLOAD_RUN_Duration = Wire.read() ;
-  Test_CHARGE_MODE = Wire.read();
+  Test_CHARGE_MODE = Wire.read(); 
+  Serial.println("Command" ) ; 
+Serial.println(PAYLOAD_DELAY_TO_RUN) ;
+Serial.println(PAYLOAD_RUN_Duration) ;
+Serial.println(Test_CHARGE_MODE) ;  
+  
 }
 
  
@@ -174,35 +176,32 @@ void RUN_PAY_LOAD()
 
 } 
 
-
-
-void CHECK_FOR_CHARGE() 
+void Charge_Mode () 
 {
-  if ((Data_in[1]) < 3 || (Test_CHARGE_MODE ==1)) 
-  {
-    SERVO_CONTROL_ANGLE_(Get_MAx_LDR_index()) ; 
-    
-    for (int i = 0 ; i <4 ; i++) {
-    digitalWrite(CHARGE_PIN_INDICATOR,HIGH) ; 
-    delay(1500) ;
-    digitalWrite(CHARGE_PIN_INDICATOR, LOW);
-   } 
-
-  }
-} 
+  /*--------------------------------------------------------------------------------------
+[FUNCTION NAME] :Get_MAx_LDR_Value
+[DESRIPTION]    : Get the max value of LDR sensor that 
+                  used to control the coordinate of the cube  
+[ARGUMENT(S)]   : 
+   [IN]         : void 
+[Return]        : int data represent the max value 
+---------------------------------------------------------------------------------------*/
 
 
-void SERVO_CONTROL_ANGLE_(int index )  
+
+if (Data_in[2] < Data_in[3]) 
 { 
-  switch (index+1)
-  {
-  case 1 :
-    myservo.write(0);
-    break;
-  case 2 :
-    myservo.write(90);
-    break;
+  
 
-  }
+     myservo.write(0);              
+    
+ 
+}
+else 
+{
+     myservo.write(180);              
 
 }
+
+ 
+} 
