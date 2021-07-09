@@ -14,9 +14,10 @@ Servo myservo ;
 
 
 /******************************************************/
+void SERVO_CONTROL_ANGLE_(int index )   ; 
 
 int Command = 0 ; 
-int Data[3] = {0,} ; 
+int Data[3] = {1,2,3} ; 
 int counter = 0 ;
 int Test_CHARGE_MODE  = 0  ; 
 int PAYLOAD_DELAY_TO_RUN = 0;
@@ -33,14 +34,20 @@ void setup()
   myservo.attach(MOTOR_SERVO_ATTACH_PIN);
   pinMode(PAYLOAD_PIN, OUTPUT);
   pinMode(CHARGE_PIN_INDICATOR, OUTPUT);
+  Serial.begin(9600) ; 
 }
 
 void loop() {
+  //delay(6000) ; 
   Read_Sensor_Vaule() ;
   Update_Telemetry_data() ;
   delay(2000) ;  
   RUN_PAY_LOAD();
-  CHECK_FOR_CHARGE() ; 
+  CHECK_FOR_CHARGE() ;  
+  for (int i =  0 ; i<4 ; i++) 
+  {
+    Serial.println(Data_in[i]) ; 
+  }
 }
 
 // function that executes whenever data is requested by master
@@ -115,7 +122,8 @@ int Get_MAx_LDR_index()
 
   int max = Get_MAx_LDR_Value() ; 
   int index = 0 ;
-  for (int i = 2; i < 4; i++)
+  int i ; 
+  for ( i = 2; i < 4; i++)
   {
     if (Data_in[i] >= max)
     {
@@ -135,12 +143,12 @@ void Update_Telemetry_data()
 
 void receiveEvent(int howMany) {
 
-  PAYLOAD_DELAY_TO_RUN = wire.read() ;
-  PAYLOAD_RUN_Duration = wire.read() ;
-  Test_CHARGE_MODE = wire.read();
+  PAYLOAD_DELAY_TO_RUN = Wire.read() ;
+  PAYLOAD_RUN_Duration = Wire.read() ;
+  Test_CHARGE_MODE = Wire.read();
 }
 
-
+ 
 void RUN_PAY_LOAD() 
 {
 
@@ -172,7 +180,7 @@ void CHECK_FOR_CHARGE()
 {
   if ((Data_in[1]) < 3 || (Test_CHARGE_MODE ==1)) 
   {
-    SERVO_CONTROL_ANGLE(Get_MAx_LDR_index()) ; 
+    SERVO_CONTROL_ANGLE_(Get_MAx_LDR_index()) ; 
     
     for (int i = 0 ; i <4 ; i++) {
     digitalWrite(CHARGE_PIN_INDICATOR,HIGH) ; 
@@ -184,7 +192,7 @@ void CHECK_FOR_CHARGE()
 } 
 
 
-void SERVO_CONTROL_ANGLE(iny index )  
+void SERVO_CONTROL_ANGLE_(int index )  
 { 
   switch (index+1)
   {
@@ -195,9 +203,6 @@ void SERVO_CONTROL_ANGLE(iny index )
     myservo.write(90);
     break;
 
-  default:
-    myservo.write(0);
-    break;
   }
 
 }
